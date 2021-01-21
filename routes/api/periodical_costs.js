@@ -35,4 +35,54 @@ router.get(
     }
 );
 
+// @route   POST api/periodical-costs
+// @desc    Add periodical costs for a book
+// @access  Private
+router.post(
+    "/",
+    passport.authenticate("jwt", { session: false }),
+    (req, res) => {
+        const errors = [];
+
+        const bookId = req.body.bookId;
+        const firstEdition = req.body.first_edition;
+        const published = req.body.published;
+        const royalty = req.body.royalty;
+        const authorTranslatorLiterary = req.body.author_translator_literary;
+
+        return PeriodicalCosts.getPeriodicalCostByBook(bookId).then(existingCost => {
+            if (existingCost !== null) {
+                errors.push("Periodical Costs for this book already exists! Please update the existing Periodical costs!");
+                return res.status(404).json({errors});
+            }
+            return PeriodicalCosts.addPeriodicalCosts(firstEdition, published, royalty, authorTranslatorLiterary, bookId).then(() => {
+                return res.json({
+                    success: true
+                });
+            })
+        })
+    }
+);
+
+// @route   POST api/periodical-costs/modify
+// @desc    Update periodical costs for a book
+// @access  Private
+router.post(
+    "/modify",
+    passport.authenticate("jwt", { session: false }),
+    (req, res) => {
+        const costId = req.body.key;
+        const firstEdition = req.body.first_edition;
+        const published = req.body.published;
+        const royalty = req.body.royalty;
+        const authorTranslatorLiterary = req.body.author_translator_literary;
+
+        return PeriodicalCosts.updatePeriodicalCosts(firstEdition, published, royalty, authorTranslatorLiterary, costId).then(() => {
+            return res.json({
+                success: true
+            });
+        })
+    }
+);
+
 module.exports = router;

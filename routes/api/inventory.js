@@ -84,4 +84,25 @@ router.post(
     }
 );
 
+// @route   POST api/inventory/modify
+// @desc    Update Inventory
+// @access  Private
+router.post(
+    "/modify",
+    passport.authenticate("jwt", { session: false }),
+    (req, res) => {
+        const errors = [];
+
+        const inventory = req.body.count;
+        const inventoryId = req.body.key;
+
+        // Update inventory
+        return Inventory.updateInventoryById(inventory, inventoryId).then(() => {
+            return res.json({
+                success: true
+            });
+        });
+    }
+);
+
 module.exports = router;

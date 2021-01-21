@@ -6,11 +6,26 @@ const getAllBooks = () => {
 }
 
 const addBook = (name, isbn, author, seriesId) => {
-    return db.query(`INSERT INTO "Book" (name, isbn, author, series_id) VALUES ($1, $2, $3, $4) RETURNING id`, [name, isbn, author, seriesId]);
+    return db.query(`INSERT INTO "Book" (name, isbn, author, book_series_id) VALUES ($1, $2, $3, $4) RETURNING id;`, [name, isbn, author, seriesId]);
     
+}
+
+const getAllBookSeries = () => {
+    return db.query(`SELECT id, name FROM "BookSeries" ORDER BY id;`);
+}
+
+const addBookSeries = (name) => {
+    return db.query(`INSERT INTO "BookSeries" (name) VALUES ($1) RETURNING id;`, [name]);
+}
+
+const updateBookById = (book, isbn, author, bookId) => {
+    return db.query(`UPDATE "Book" SET name = $1, author = $2, isbn = $3, updated_at = now() WHERE id = $4;`, [book, author, isbn, bookId]);
 }
 
 module.exports = {
     getAllBooks,
-    addBook
+    addBook,
+    getAllBookSeries,
+    addBookSeries,
+    updateBookById
 };

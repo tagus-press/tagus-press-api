@@ -57,40 +57,101 @@ router.post(
         const bookId = req.body.bookId;
         const location = req.body.location;
         const date = req.body.date;
+        const isEBook = req.body.isEBook || false;
         const price = req.body.price;
         const quantity = req.body.quantity;
         const total = req.body.total;
 
-        console.log(bookId, location, date, price, quantity, total);
+        // Get Location
+        return Location.getLocationByName(location).then(location => {
+            if (!isEBook) {
+                if (location == null) {
+                    errors.push("Cannot find center with given name");
+                    return res.status(404).json({ errors });
+                }
+
+                return Inventory.getInventoryByLocationAndBook(bookId, location.id).then(existingInventory => {
+                    if (existingInventory == null) {
+                        // No Inventory
+                        errors.push("No Inventory available for the given book and center");
+                        return res.status(404).json({ errors });
+                    } else {
+                        if (existingInventory.count < quantity) {
+                            errors.push("Not enough Inventory");
+                            return res.status(404).json({ errors });
+                        }
+                        // Add Sale
+                        return Sale.addSale(bookId, location.id, quantity, price, total, date, isEBook).then(() => {
+                            // Reduce Inventory
+                            return Inventory.updateInventory((-1 * quantity), bookId, location.id).then(() => {
+                                return res.json({
+                                    success: true
+                                })
+                            })
+                        })
+                    }
+                })
+            } else {
+                return Sale.addSale(bookId, location.id, quantity, price, total, date, isEBook).then(() => {
+                    return res.json({
+                        success: true
+                    })
+                })
+            }
+        })
+    }
+);
+
+// @route   POST api/sales/modify
+// @desc    Update Sale
+// @access  Private
+router.post(
+    "/modify",
+    passport.authenticate("jwt", { session: false }),
+    (req, res) => {
+        const errors = [];
+
+        const saleId = req.body.key;
+        const bookId = req.body.bookId;
+        const location = req.body.location;
+        const isEBook = req.body.isEBook || false;
+        const price = req.body.amount;
+        const quantity = req.body.quantity;
+        const total = req.body.total_amount;
 
         // Get Location
         return Location.getLocationByName(location).then(location => {
-            if (location == null) {
-                errors.push("Cannot find center with given name");
-                return res.status(404).json({ errors });
-            }
-
-            return Inventory.getInventoryByLocationAndBook(bookId, location.id).then(existingInventory => {
-                if (existingInventory == null) { 
-                    // No Inventory
-                    errors.push("No Inventory available for the given book and center");
+            if (!isEBook) {
+                if (location == null) {
+                    errors.push("Cannot find center with given name");
                     return res.status(404).json({ errors });
-                } else {
-                    if (existingInventory.count < quantity) {
+                }
+
+                return Promise.all([Inventory.getInventoryByLocationAndBook(bookId, location.id), Sale.getSaleById(saleId)]).then(data => {
+                    const existingInventory = data[0];
+                    const existingSale = data[1];
+                    const change = quantity - existingSale.quantity;
+                    if (change > existingInventory.count) {
                         errors.push("Not enough Inventory");
                         return res.status(404).json({ errors });
                     }
                     // Add Sale
-                    return Sale.addSale(bookId, location.id, quantity, price, total, date).then(() => {
-                        // Reduce Inventory
-                        return Inventory.updateInventory((-1 * quantity), bookId, location.id).then(() => {
+                    return Sale.updateSaleById( price, quantity, total, saleId).then(() => {
+                        // Update Inventory
+                        return Inventory.updateInventory((-1 * change), bookId, location.id).then(() => {
                             return res.json({
                                 success: true
                             })
                         })
                     })
-                } 
-            })
+                })
+            } else {
+                return Sale.updateSaleById(price, quantity, total, saleId).then(() => {
+                    return res.json({
+                        success: true
+                    })
+                })
+            }
         })
     }
 );
